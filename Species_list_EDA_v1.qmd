@@ -1,0 +1,144 @@
+---
+title: "Species list EDA"
+author: João Gonçalves
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+format: html
+editor: visual
+---
+
+## Species list - exploratory data analysis
+
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+
+# Load necessary libraries
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(patchwork)
+
+```
+
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+
+# Load data
+df <- read_excel("Species_list_v2.xlsx")
+
+```
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+
+# Total number of species
+total_species <- nrow(df)
+cat("Total number of species:", total_species, "\n")
+
+# Included vs Candidate in Status Union Concern
+status_counts <- table(df$`Status Union Concern`)
+print(status_counts)
+
+king_counts <- table(df %>%
+         filter(System=="Terrestrial") %>% 
+           pull(Kingdom))
+print(king_counts)
+
+# Terrestrial vs Aquatic species
+system_counts <- table(df$System)
+print(system_counts)
+
+```
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+
+# Frequency of species by Kingdom (horizontal barplot)
+ggplot(df %>%
+         filter(System=="Terrestrial") %>% 
+         count(Kingdom, sort = TRUE),
+       aes(x = reorder(Kingdom, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Species Count by Kingdom", x = "Kingdom", y = "Count") +
+  theme_minimal()
+
+# Frequency of species by Phylum (horizontal barplot)
+ggplot(df %>%
+         filter(System=="Terrestrial") %>% 
+         count(Phylum, sort = TRUE),
+       aes(x = reorder(Phylum, n), y = n)) +
+  geom_bar(stat = "identity", fill = "coral") +
+  coord_flip() +
+  labs(title = "Species Count by Phylum", x = "Phylum", y = "Count") +
+  theme_minimal()
+
+# Frequency of species by Organism Type (horizontal barplot)
+g_p <- ggplot(df %>%
+         filter(System=="Terrestrial") %>% 
+         filter(Kingdom=="Plantae") %>% 
+         count(Organism_Type, sort = TRUE),
+       aes(x = reorder(Organism_Type, n), y = n)) +
+  geom_bar(stat = "identity", fill = "seagreen") +
+  coord_flip() +
+  ylim(0, 15) + 
+  labs(title = "Plants", x = "Organism Type", y = "Count") +
+  theme_minimal()
+
+g_a <- ggplot(df %>%
+         filter(System=="Terrestrial") %>% 
+         filter(Kingdom=="Animalia") %>% 
+         count(Organism_Type, sort = TRUE),
+       aes(x = reorder(Organism_Type, n), y = n)) +
+  geom_bar(stat = "identity", fill = "seagreen") +
+  coord_flip() +
+  ylim(0, 18) + 
+  labs(title = "Animals", x = "Organism Type", y = "Count") +
+  theme_minimal()
+
+g_p | g_a
+
+```
+
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+
+# Rename columns to valid R names (optional but recommended for clean code)
+names(df)[names(df) == "N (Total)"] <- "N_Total"
+names(df)[names(df) == "N [1971,2010]"] <- "N_1971_2010"
+names(df)[names(df) == "N [2010, 2015]"] <- "N_2010_2015"
+
+# Pivot the data to long format
+df_long <- df %>%
+  filter(System=="Terrestrial") %>% 
+  select(N_Total, N_1971_2010, N_2010_2015) %>%
+  pivot_longer(cols = everything(), names_to = "Period", values_to = "Count")
+
+# Plot boxplots
+ggplot(df_long, aes(x = Period, y = Count)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue") +
+  scale_y_log10() +
+  labs(title = "Boxplots of Species Records by Time Period",
+       x = "Time Period",
+       y = "Number of Records") +
+  theme_minimal()
+```
+
